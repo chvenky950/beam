@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Beam any HTML file live. Share instantly. Delete anytime.">
+<title>Beam</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+  --bg: #000;
+  --s1: rgba(255,255,255,0.04);
+  --s2: rgba(255,255,255,0.08);
+  --s3: rgba(255,255,255,0.12);
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --t1: #F5F5F7;
+  --t2: rgba(245,245,247,0.55);
+  --t3: rgba(245,245,247,0.28);
+  --blue: #0071E3;
+  --blue-h: #0080FF;
+  --blue-s: rgba(0,113,227,0.12);
+  --blue-g: rgba(0,113,227,0.22);
+  --green: #32D74B;
+  --green-s: rgba(50,215,75,0.1);
+  --orange: #FF9F0A;
+  --orange-s: rgba(255,159,10,0.1);
+  --red: #FF453A;
+  --red-s: rgba(255,69,58,0.1);
+  --r-lg: 18px;
+  --r-md: 13px;
+  --r-sm: 9px;
+  --font: -apple-system, BlinkMacSystemFont, 'Plus Jakarta Sans', 'Helvetica Neue', sans-serif;
+  --spring: cubic-bezier(0.34,1.56,0.64,1);
+  --ease: cubic-bezier(0.4,0,0.2,1);
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient glow top */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 45% at 50% -5%, rgba(0,113,227,0.11), transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Grain */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 0 16px;
+  padding-top: max(44px, env(safe-area-inset-top, 44px));
+  padding-bottom: max(52px, env(safe-area-inset-bottom, 52px));
+}
+
+/* Glass card base */
+.card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+/* ── HEADER ───────────────────────────── */
+.hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  animation: riseIn .45s var(--ease) both;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+  color: var(--t1);
+}
+.logo em { color: var(--blue); font-style: normal; }
+
+.net {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 5px 11px 5px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--t2);
+}
+.net-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+  transition: background .3s;
+}
+.net-dot.off { background: var(--red); }
+
+/* ── OFFLINE NOTICE ───────────────────── */
+.offline-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: var(--orange-s);
+  border: 1px solid rgba(255,159,10,.2);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--orange);
+  margin-bottom: 12px;
+  animation: riseIn .3s var(--ease) both;
+}
+.offline-bar.on { display: flex; }
+
+/* ── UPLOAD ZONE ──────────────────────── */
+.upload-zone {
+  position: relative;
+  padding: 32px 22px 28px;
+  text-align: center;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, box-shadow .2s;
+  animation: riseIn .45s .05s var(--ease) both;
+}
+.upload-zone input[type="file"] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+  width: 100%; height: 100%;
+}
+.upload-zone:hover { background: var(--s2); border-color: var(--border2); }
+.upload-zone.drag { background: var(--s2); border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-g); }
+
+.up-icon {
+  width: 50px; height: 50px;
+  background: var(--s2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 21px;
+  margin: 0 auto 16px;
+  transition: transform .2s var(--spring);
+  pointer-events: none;
+}
+.upload-zone:hover .up-icon,
+.upload-zone.drag .up-icon { transform: scale(1.07); }
+
+.up-title {
+  font-size: 16px; font-weight: 600;
+  letter-spacing: -.3px;
+  margin-bottom: 5px;
+}
+.up-sub { font-size: 13px; color: var(--t2); line-height: 1.5; }
+
+.up-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 15px;
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 99px; padding: 3px 11px;
+  font-size: 11px; color: var(--t3); font-weight: 500;
+}
+
+/* ── FILE CARD ────────────────────────── */
+.file-card {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-top: 10px;
+}
+.file-card.on { display: flex; animation: riseIn .35s var(--spring) both; }
+
+.file-icon {
+  width: 40px; height: 40px;
+  background: var(--blue-s);
+  border: 1px solid rgba(0,113,227,.18);
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.file-info { flex: 1; min-width: 0; }
+.file-nm {
+  font-size: 13px; font-weight: 600;
+  letter-spacing: -.1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.file-sz-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.file-sz { font-size: 11px; color: var(--t3); }
+.sz-badge {
+  display: none;
+  font-size: 10px; font-weight: 600;
+  color: var(--orange); background: var(--orange-s);
+  border-radius: 4px; padding: 1px 5px;
+}
+.sz-badge.on { display: inline; }
+
+.btn-preview {
+  background: none; border: none;
+  color: var(--t3); font-family: var(--font);
+  font-size: 11px; font-weight: 500;
+  cursor: pointer; padding: 5px 9px;
+  border-radius: var(--r-sm);
+  transition: all .15s; flex-shrink: 0;
+}
+.btn-preview:hover { background: var(--s2); color: var(--t1); }
+
+/* ── BEAM BUTTON ──────────────────────── */
+.btn-beam {
+  width: 100%; display: flex;
+  align-items: center; justify-content: center; gap: 8px;
+  background: var(--blue); color: #fff;
+  border: none; border-radius: var(--r-md);
+  padding: 15px 20px;
+  font-family: var(--font); font-size: 15px;
+  font-weight: 600; letter-spacing: -.2px;
+  cursor: pointer; margin-top: 10px;
+  transition: all .15s var(--ease);
+  position: relative; overflow: hidden;
+  animation: riseIn .45s .1s var(--ease) both;
+}
+.btn-beam::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,.1), transparent);
+  pointer-events: none;
+}
+.btn-beam:hover:not(:disabled) { background: var(--blue-h); transform: translateY(-1px); box-shadow: 0 8px 24px var(--blue-g); }
+.btn-beam:active:not(:disabled) { transform: scale(.97); box-shadow: none; }
+.btn-beam:disabled { background: var(--s2); color: var(--t3); cursor: not-allowed; }
+.btn-beam:disabled::after { display: none; }
+
+.btn-beam .spin-ring {
+  display: none;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+.btn-beam.loading .spin-ring { display: block; }
+
+/* ── ERROR ────────────────────────────── */
+.err-box {
+  display: none;
+  background: var(--red-s);
+  border: 1px solid rgba(255,69,58,.2);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  font-size: 12px; color: var(--red);
+  line-height: 1.55; margin-top: 10px;
+}
+.err-box.on { display: block; animation: riseIn .3s var(--ease) both; }
+
+/* ── PROGRESS ─────────────────────────── */
+.prog-wrap {
+  display: none;
+  margin-top: 12px;
+}
+.prog-wrap.on { display: block; animation: riseIn .3s var(--ease) both; }
+.prog-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--t3); margin-bottom: 7px; }
+.prog-track { height: 2px; background: var(--s2); border-radius: 99px; overflow: hidden; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--blue), #38BDF8); border-radius: 99px; width: 0%; transition: width .25s var(--ease); }
+
+/* ── RESULT CARD ──────────────────────── */
+.result-card { display: none; margin-top: 10px; }
+.result-card.on { display: block; animation: riseIn .4s var(--spring) both; }
+
+.rc-top {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.live-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; color: var(--green);
+}
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%; background: var(--green);
+  animation: blink 2s ease-in-out infinite;
+}
+.rc-fname {
+  flex: 1; font-size: 12px; color: var(--t2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-align: right;
+}
+.rc-body { padding: 14px 16px; }
+
+.url-lbl { font-size: 10px; font-weight: 600; letter-spacing: .8px; color: var(--t3); text-transform: uppercase; margin-bottom: 7px; }
+.url-val {
+  font-size: 13px; color: var(--blue);
+  word-break: break-all; line-height: 1.55;
+  padding: 10px 12px;
+  background: var(--blue-s);
+  border: 1px solid rgba(0,113,227,.15);
+  border-radius: var(--r-sm);
+  margin-bottom: 12px;
+  cursor: text; user-select: all;
+}
+
+/* Action strip */
+.act-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+}
+.act-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 4px 9px;
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: var(--font); font-size: 10px; font-weight: 600;
+  color: var(--t2); cursor: pointer;
+  transition: all .15s var(--ease); letter-spacing: .1px;
+}
+.act-icon { font-size: 15px; line-height: 1; }
+.act-btn:hover { background: var(--s2); border-color: var(--border2); color: var(--t1); }
+.act-btn:active { transform: scale(.93); }
+.act-btn.copied { background: var(--green-s); border-color: rgba(50,215,75,.25); color: var(--green); }
+.act-btn.danger { }
+.act-btn.danger:hover { background: var(--red-s); border-color: rgba(255,69,58,.25); color: var(--red); }
+
+/* QR */
+.qr-wrap {
+  overflow: hidden; max-height: 0;
+  opacity: 0;
+  transition: max-height .4s var(--ease), opacity .3s, margin-top .3s;
+}
+.qr-wrap.on { max-height: 220px; opacity: 1; margin-top: 14px; }
+.qr-inner { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.qr-lbl { font-size: 10px; color: var(--t3); font-weight: 600; letter-spacing: .6px; }
+/* FIX: was #qr-code — must match id="qrCode" in HTML */
+#qrCode { background: #fff; padding: 10px; border-radius: 10px; line-height: 0; display: inline-block; }
+
+/* Expiry */
+.expiry { display: none; align-items: center; gap: 5px; margin-top: 10px; font-size: 11px; color: var(--t3); }
+.expiry.on { display: flex; }
+
+/* ── LOCAL PREVIEW ────────────────────── */
+.preview-panel { display: none; margin-top: 10px; }
+.preview-panel.on { display: block; animation: riseIn .35s var(--spring) both; }
+.pv-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.pv-lbl { font-size: 11px; font-weight: 600; color: var(--t2); letter-spacing: .5px; }
+.btn-close {
+  background: none; border: none;
+  color: var(--t3); font-size: 16px; cursor: pointer;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  transition: all .15s;
+}
+.btn-close:hover { background: var(--s2); color: var(--t1); }
+.pv-frame {
+  width: 100%; height: 260px; border: none; display: block;
+  border-radius: 0 0 var(--r-lg) var(--r-lg); background: #fff;
+}
+
+/* ── HISTORY ──────────────────────────── */
+.history { margin-top: 28px; animation: riseIn .5s .15s var(--ease) both; }
+.sec-lbl { font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--t3); margin-bottom: 10px; }
+
+.h-empty {
+  text-align: center; padding: 22px;
+  font-size: 13px; color: var(--t3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--s1);
+}
+.h-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--s1);
+  margin-bottom: 8px;
+  transition: background .15s;
+  position: relative; overflow: hidden;
+}
+.h-item::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 2px; background: var(--green);
+}
+.h-item.dead::before { background: var(--t3); }
+.h-item:hover { background: var(--s2); }
+.h-ico { font-size: 15px; flex-shrink: 0; }
+.h-info { flex: 1; min-width: 0; }
+.h-nm { font-size: 12px; font-weight: 600; letter-spacing: -.1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.h-meta { font-size: 10px; color: var(--t3); margin-top: 1px; }
+.h-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; flex-shrink: 0; }
+.h-badge.live { color: var(--green); background: var(--green-s); }
+.h-badge.dead { color: var(--t3); background: var(--s2); }
+.h-acts { display: flex; gap: 3px; flex-shrink: 0; }
+.ico-btn {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none;
+  font-size: 13px; cursor: pointer;
+  color: var(--t2); border-radius: var(--r-sm);
+  transition: all .15s;
+}
+.ico-btn:hover { background: var(--s2); color: var(--t1); }
+.ico-btn.del:hover { background: var(--red-s); color: var(--red); }
+.ico-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+/* ── DELETE SHEET ─────────────────────── */
+.sheet-bg {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 100;
+  align-items: flex-end; justify-content: center;
+  padding: 0 16px max(20px, env(safe-area-inset-bottom));
+}
+.sheet-bg.on { display: flex; animation: fadeIn .2s var(--ease); }
+.sheet {
+  background: #1C1C1E;
+  border: 1px solid var(--border2);
+  border-radius: 22px 22px 18px 18px;
+  padding: 22px 20px 18px;
+  width: 100%; max-width: 400px;
+  animation: slideUp .35s var(--spring);
+}
+.sheet-handle { width: 36px; height: 4px; background: rgba(255,255,255,.13); border-radius: 99px; margin: 0 auto 20px; }
+.sheet-ico { text-align: center; font-size: 30px; margin-bottom: 9px; }
+.sheet-title { text-align: center; font-size: 17px; font-weight: 700; letter-spacing: -.4px; margin-bottom: 6px; }
+.sheet-sub { text-align: center; font-size: 13px; color: var(--t2); line-height: 1.55; margin-bottom: 14px; }
+.sheet-note {
+  background: var(--orange-s); border: 1px solid rgba(255,159,10,.2);
+  border-radius: var(--r-sm); padding: 9px 12px;
+  font-size: 11px; color: var(--orange); line-height: 1.5; margin-bottom: 18px;
+}
+.sheet-btns { display: flex; flex-direction: column; gap: 8px; }
+.s-btn {
+  width: 100%; padding: 14px; border-radius: var(--r-md); border: none;
+  font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.s-btn.cancel { background: var(--s2); color: var(--t1); }
+.s-btn.cancel:hover { background: var(--s3); }
+.s-btn.del { background: var(--red-s); color: var(--red); border: 1px solid rgba(255,69,58,.25); }
+.s-btn.del:hover { background: rgba(255,69,58,.2); }
+
+/* ── TOAST ────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: max(26px, env(safe-area-inset-bottom, 26px));
+  left: 50%; transform: translateX(-50%) translateY(70px);
+  background: rgba(28,28,30,.93);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border2);
+  border-radius: 99px; padding: 9px 16px;
+  font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 7px;
+  z-index: 200; pointer-events: none;
+  white-space: nowrap;
+  transition: transform .35s var(--spring), opacity .25s;
+  opacity: 0;
+}
+.toast.on { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* ── ANIMATIONS ───────────────────────── */
+@keyframes riseIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(36px); } to { opacity: 1; transform: none; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+/* ── ACCESSIBILITY ────────────────────── */
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+
+/* ── SCROLLBAR ────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--s3); border-radius: 99px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header class="hd">
+    <div class="logo">beam<em>.</em></div>
+    <div class="net" id="netPill" role="status" aria-live="polite">
+      <div class="net-dot" id="netDot"></div>
+      <span id="netTxt">Online</span>
+    </div>
+  </header>
+
+  <!-- Offline bar -->
+  <div class="offline-bar" id="offlineBar" role="alert">
+    <span>⚠</span> Offline — connect to share. Preview still works.
+  </div>
+
+  <!-- Upload zone -->
+  <div class="card upload-zone" id="uploadZone"
+       role="button" tabindex="0"
+       aria-label="Upload HTML file. Tap or drag and drop.">
+    <input type="file" id="fileInput" accept=".html,.htm"
+           aria-label="Choose an HTML file">
+    <div class="up-icon" aria-hidden="true">⬆</div>
+    <div class="up-title">Drop your HTML file</div>
+    <div class="up-sub">Tap to browse · drag &amp; drop<br>.html and .htm only</div>
+    <div class="up-chip" aria-label="Max 512 MB, stored up to 1 year">
+      ◇ &nbsp;512 MB max &nbsp;·&nbsp; up to 1 year
+    </div>
+  </div>
+
+  <!-- File card -->
+  <div class="card file-card" id="fileCard" role="region" aria-label="Selected file info">
+    <div class="file-icon" aria-hidden="true">📄</div>
+    <div class="file-info">
+      <div class="file-nm" id="fName">—</div>
+      <div class="file-sz-row">
+        <span class="file-sz" id="fSize">—</span>
+        <span class="sz-badge" id="szBadge">Large file</span>
+      </div>
+    </div>
+    <button class="btn-preview" id="btnPrev" onclick="togglePreview()"
+            aria-expanded="false" aria-controls="previewPanel">Preview</button>
+  </div>
+
+  <!-- CTA -->
+  <button class="btn-beam" id="beamBtn" disabled onclick="startUpload()"
+          aria-label="Upload and share file publicly">
+    <div class="spin-ring" aria-hidden="true"></div>
+    <span>Beam it live</span>
+  </button>
+
+  <!-- Error -->
+  <div class="err-box" id="errBox" role="alert"></div>
+
+  <!-- Progress -->
+  <div class="prog-wrap" id="progWrap"
+       role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+       aria-label="Upload progress">
+    <div class="prog-row">
+      <span id="progLbl">Uploading…</span>
+      <span id="progPct">0%</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+  </div>
+
+  <!-- Result -->
+  <div class="card result-card" id="resultCard"
+       role="region" aria-label="Upload result" aria-live="polite">
+    <div class="rc-top">
+      <div class="live-badge">
+        <div class="live-dot" aria-hidden="true"></div>
+        Live
+      </div>
+      <div class="rc-fname" id="rcFname"></div>
+    </div>
+    <div class="rc-body">
+      <div class="url-lbl">Public URL</div>
+      <div class="url-val" id="urlVal" tabindex="0" aria-label="Public URL, tap to select">—</div>
+      <div class="act-strip">
+        <button class="act-btn" id="copyBtn" onclick="doCopy()" aria-label="Copy link">
+          <span class="act-icon" id="copyIcon">⎘</span>
+          <span id="copyLbl">Copy</span>
+        </button>
+        <button class="act-btn" onclick="doOpen()" aria-label="Open in new tab">
+          <span class="act-icon">↗</span>Open
+        </button>
+        <button class="act-btn" id="qrBtn" onclick="toggleQR()"
+                aria-expanded="false" aria-controls="qrWrap" aria-label="Toggle QR code">
+          <span class="act-icon">◈</span>QR
+        </button>
+        <button class="act-btn danger" onclick="askDelete(null)" aria-label="Delete file">
+          <span class="act-icon">⌫</span>Delete
+        </button>
+      </div>
+
+      <!-- QR -->
+      <div class="qr-wrap" id="qrWrap">
+        <div class="qr-inner">
+          <div class="qr-lbl">Scan to view</div>
+          <div id="qrCode" aria-label="QR code for public URL"></div>
+        </div>
+      </div>
+
+      <!-- Expiry -->
+      <div class="expiry" id="expiryRow">
+        <span>◌</span>
+        <span id="expiryTxt"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Local preview -->
+  <div class="card preview-panel" id="previewPanel">
+    <div class="pv-top">
+      <span class="pv-lbl">Local Preview</span>
+      <button class="btn-close" onclick="togglePreview()" aria-label="Close preview">✕</button>
+    </div>
+    <iframe class="pv-frame" id="pvFrame"
+            sandbox="allow-scripts allow-same-origin"
+            title="Preview of your HTML file"></iframe>
+  </div>
+
+  <!-- History -->
+  <section class="history" aria-label="Upload history">
+    <div class="sec-lbl">History</div>
+    <div id="histList"></div>
+  </section>
+
+</div>
+
+<!-- Delete sheet -->
+<div class="sheet-bg" id="sheetBg"
+     role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="sheet-ico" aria-hidden="true">🗑</div>
+    <div class="sheet-title" id="sheetTitle">Delete this file?</div>
+    <div class="sheet-sub">The public link will be deactivated and the file removed from the server.</div>
+    <div class="sheet-note">⚠ If no delete token was received, the file will expire naturally — the link may work briefly after deletion.</div>
+    <div class="sheet-btns">
+      <button class="s-btn del" onclick="confirmDelete()">Delete permanently</button>
+      <button class="s-btn cancel" onclick="closeSheet()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span id="toastIco"></span>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────
+const MAX_HIST = 5;
+const WARN_MB  = 50 * 1024 * 1024;
+
+let curFile   = null;
+let curDel    = null; // { url, token, hid }
+let qrOpen    = false;
+let qrDone    = false;
+let prevOpen  = false;
+let toastTimer;
+
+// ── Boot ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderHist();
+  checkNet();
+  window.addEventListener('online',  checkNet);
+  window.addEventListener('offline', checkNet);
+
+  // Keyboard trigger on upload zone
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('fileInput').click(); }
+  });
+
+  // Drag events
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', e => { if (!zone.contains(e.relatedTarget)) zone.classList.remove('drag'); });
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  document.getElementById('fileInput').addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+});
+
+// ── Network ───────────────────────────────────────────────
+function checkNet() {
+  const online = navigator.onLine;
+  document.getElementById('netDot').classList.toggle('off', !online);
+  document.getElementById('netTxt').textContent = online ? 'Online' : 'Offline';
+  document.getElementById('offlineBar').classList.toggle('on', !online);
+}
+
+// ── File ─────────────────────────────────────────────────
+function handleFile(file) {
+  if (!/\.html?$/i.test(file.name)) { showErr('Only .html and .htm files are accepted.'); return; }
+  curFile = file;
+  clearErr();
+  // FIX: was cls('resultCard', 'on') which incorrectly SHOWED the result card;
+  // should HIDE it so stale result from a previous upload doesn't appear.
+  cls('resultCard', 'on', false);
+
+  document.getElementById('fName').textContent = file.name;
+  document.getElementById('fSize').textContent = fmtB(file.size);
+  document.getElementById('szBadge').classList.toggle('on', file.size > WARN_MB);
+  document.getElementById('fileCard').classList.add('on');
+  document.getElementById('beamBtn').disabled = false;
+
+  // Load preview silently
+  const r = new FileReader();
+  r.onload = e => { document.getElementById('pvFrame').srcdoc = e.target.result; };
+  r.readAsText(file);
+}
+
+// ── Preview toggle ────────────────────────────────────────
+function togglePreview() {
+  prevOpen = !prevOpen;
+  document.getElementById('previewPanel').classList.toggle('on', prevOpen);
+  const btn = document.getElementById('btnPrev');
+  btn.textContent = prevOpen ? 'Hide' : 'Preview';
+  btn.setAttribute('aria-expanded', prevOpen);
+}
+
+// ── Upload ────────────────────────────────────────────────
+async function startUpload() {
+  if (!curFile) return;
+  if (!navigator.onLine) { showErr('No internet — connect and try again.'); return; }
+  clearErr();
+  cls('resultCard', 'on', false);
+  setLoading(true);
+  setProgress(0, 'Connecting…');
+
+  try {
+    const res = await upload0x0(curFile);
+    setProgress(100, 'Done');
+    await wait(300);
+    setLoading(false);
+    showResult(res);
+    saveHist({ id: `${Date.now()}`, name: curFile.name, size: curFile.size, url: res.url, token: res.token || null, date: new Date().toISOString(), status: 'live' });
+  } catch (err) {
+    setLoading(false);
+    showErr(`Upload failed: ${err.message}. Check your connection and try again.`);
+  }
+}
+
+async function upload0x0(file) {
+  const prog = animProg(8, 85, 2000);
+  let url = null;
+
+  // Primary: catbox.moe — CORS-enabled, permanent hosting, plain-URL response
+  try {
+    const form = new FormData();
+    form.append('reqtype', 'fileupload');
+    form.append('fileToUpload', file);
+    const res = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: form });
+    if (res.ok) {
+      const txt = (await res.text()).trim();
+      if (txt.startsWith('http')) url = txt;
+    }
+  } catch { /* fall through to backup */ }
+
+  // Fallback: litterbox.catbox.moe — 72h expiry
+  if (!url) {
+    const form2 = new FormData();
+    form2.append('reqtype', 'fileupload');
+    form2.append('time', '72h');
+    form2.append('fileToUpload', file);
+    const res2 = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: form2 });
+    if (!res2.ok) throw new Error(`Host returned ${res2.status}`);
+    const txt2 = (await res2.text()).trim();
+    if (!txt2.startsWith('http')) throw new Error('Unexpected response from host');
+    url = txt2;
+  }
+
+  clearInterval(prog);
+  setProgress(92, 'Finalizing…');
+  // catbox.moe does not issue delete tokens
+  return { url, token: null };
+}
+
+function animProg(from, to, ms) {
+  let cur = from;
+  const step = (to - from) / (ms / 60);
+  return setInterval(() => {
+    cur = Math.min(cur + step * (.7 + Math.random() * .6), to);
+    setProgress(Math.round(cur), 'Uploading…');
+  }, 60);
+}
+
+// ── Result ────────────────────────────────────────────────
+function showResult({ url, token }) {
+  document.getElementById('urlVal').textContent = url;
+  document.getElementById('rcFname').textContent = curFile?.name || '';
+  curDel = { url, token, hid: null };
+
+  // Reset QR
+  qrOpen = false; qrDone = false;
+  document.getElementById('qrWrap').classList.remove('on');
+  document.getElementById('qrCode').innerHTML = '';
+  document.getElementById('qrBtn').setAttribute('aria-expanded', false);
+
+  // Expiry line
+  document.getElementById('expiryRow').classList.add('on');
+  document.getElementById('expiryTxt').textContent = 'Hosted on catbox.moe · No expiry';
+
+  document.getElementById('resultCard').classList.add('on');
+  setTimeout(() => document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+  toast('↑', 'File is live');
+}
+
+function doCopy() {
+  const url = document.getElementById('urlVal').textContent;
+  navigator.clipboard.writeText(url).catch(() => fbCopy(url));
+  const btn = document.getElementById('copyBtn');
+  document.getElementById('copyIcon').textContent = '✓';
+  document.getElementById('copyLbl').textContent = 'Copied';
+  btn.classList.add('copied');
+  setTimeout(() => {
+    btn.classList.remove('copied');
+    document.getElementById('copyIcon').textContent = '⎘';
+    document.getElementById('copyLbl').textContent = 'Copy';
+  }, 1800);
+  toast('✓', 'Copied');
+}
+
+function doOpen() { window.open(document.getElementById('urlVal').textContent, '_blank', 'noopener'); }
+
+function toggleQR() {
+  qrOpen = !qrOpen;
+  document.getElementById('qrWrap').classList.toggle('on', qrOpen);
+  document.getElementById('qrBtn').setAttribute('aria-expanded', qrOpen);
+
+  if (qrOpen && !qrDone) {
+    try {
+      new QRCode(document.getElementById('qrCode'), {
+        text: document.getElementById('urlVal').textContent,
+        width: 140, height: 140,
+        colorDark: '#000', colorLight: '#fff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      qrDone = true;
+    } catch { document.getElementById('qrCode').textContent = document.getElementById('urlVal').textContent; }
+  }
+}
+
+// ── Delete ────────────────────────────────────────────────
+function askDelete(hid) {
+  if (hid) {
+    const arr = loadHist();
+    const item = arr.find(x => x.id === hid);
+    if (!item || item.status === 'deleted') return;
+    curDel = { url: item.url, token: item.token, hid };
+  }
+  document.getElementById('sheetBg').classList.add('on');
+  document.querySelector('.s-btn.del').focus();
+}
+
+function closeSheet() { document.getElementById('sheetBg').classList.remove('on'); }
+
+async function confirmDelete() {
+  closeSheet();
+  if (!curDel) return;
+  const { url, token, hid } = curDel;
+
+  if (token) {
+    try {
+      const f = new FormData(); f.append('token', token);
+      await fetch(url, { method: 'POST', body: f });
+    } catch { /* best effort */ }
+    toast('○', 'File deleted');
+  } else {
+    toast('⚠', 'No token — file will expire naturally');
+  }
+
+  if (hid) {
+    markDel(hid);
+  } else {
+    cls('resultCard', 'on', false);
+    const arr = loadHist();
+    const idx = arr.findIndex(x => x.url === url);
+    if (idx !== -1) { arr[idx].status = 'deleted'; saveHistRaw(arr); renderHist(); }
+  }
+  curDel = null;
+}
+
+// ── History ───────────────────────────────────────────────
+function loadHist() { try { return JSON.parse(localStorage.getItem('beam_h') || '[]'); } catch { return []; } }
+function saveHistRaw(a) { localStorage.setItem('beam_h', JSON.stringify(a)); }
+function saveHist(item) { let a = loadHist(); a.unshift(item); saveHistRaw(a.slice(0, MAX_HIST)); renderHist(); }
+function markDel(id) { const a = loadHist(); const i = a.findIndex(x => x.id === id); if (i !== -1) { a[i].status = 'deleted'; saveHistRaw(a); renderHist(); } }
+
+function renderHist() {
+  const el = document.getElementById('histList');
+  const arr = loadHist();
+
+  if (!arr.length) {
+    el.innerHTML = '<div class="h-empty">No uploads yet</div>';
+    return;
+  }
+
+  el.innerHTML = arr.map(item => {
+    const live = item.status !== 'deleted';
+    const d = new Date(item.date);
+    const when = d.toLocaleDateString('en', { month: 'short', day: 'numeric' }) + ' · ' + d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+    const eu = esc(item.url);
+    return `
+      <div class="h-item${live ? '' : ' dead'}">
+        <div class="h-ico" aria-hidden="true">📄</div>
+        <div class="h-info">
+          <div class="h-nm" title="${esc(item.name)}">${esc(item.name)}</div>
+          <div class="h-meta">${when} · ${fmtB(item.size)}</div>
+        </div>
+        <span class="h-badge ${live ? 'live' : 'dead'}">${live ? 'Live' : 'Off'}</span>
+        <div class="h-acts">
+          <button class="ico-btn" onclick="cpUrl('${eu}')" title="Copy" aria-label="Copy link" ${!live?'disabled':''}>⎘</button>
+          <button class="ico-btn" onclick="window.open('${eu}','_blank','noopener')" title="Open" aria-label="Open" ${!live?'disabled':''}>↗</button>
+          <button class="ico-btn del" onclick="askDelete('${item.id}')" title="Delete" aria-label="Delete" ${!live?'disabled':''}>⌫</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function cpUrl(url) { navigator.clipboard.writeText(url).catch(() => fbCopy(url)); toast('✓', 'Copied'); }
+function fbCopy(t) { const e = Object.assign(document.createElement('textarea'), {value: t}); document.body.appendChild(e); e.select(); document.execCommand('copy'); e.remove(); }
+
+// ── Helpers ───────────────────────────────────────────────
+function cls(id, c, add = true) { document.getElementById(id).classList[add ? 'add' : 'remove'](c); }
+function setLoading(on) {
+  const b = document.getElementById('beamBtn');
+  b.disabled = on;
+  b.classList.toggle('loading', on);
+  document.getElementById('progWrap').classList.toggle('on', on);
+  if (!on) { document.getElementById('progFill').style.width = '0%'; }
+}
+function setProgress(pct, lbl) {
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progLbl').textContent = lbl;
+  document.getElementById('progPct').textContent = pct + '%';
+  document.getElementById('progWrap').setAttribute('aria-valuenow', pct);
+}
+function showErr(msg) { const e = document.getElementById('errBox'); e.textContent = msg; e.classList.add('on'); }
+function clearErr() { document.getElementById('errBox').classList.remove('on'); }
+function toast(ico, msg) {
+  document.getElementById('toastIco').textContent = ico;
+  document.getElementById('toastMsg').textContent = msg;
+  const t = document.getElementById('toast');
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+}
+function fmtB(b) { return b < 1024 ? b + ' B' : b < 1048576 ? (b/1024).toFixed(1) + ' KB' : (b/1048576).toFixed(1) + ' MB'; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
